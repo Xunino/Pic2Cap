@@ -42,10 +42,10 @@ class trainer:
         self.vocal_size = len(self.tokenizer.word_docs) + 1
 
         self.encode_model = encode(input_shape)
-        d_model = self.encode_model.output_shape[-1]
+        # d_model = self.encode_model.output_shape[-1]
 
         self.optimizer = Adam(learning_rate=lr)
-        self.model = EncoderDecoder(d_model, self.vocal_size)
+        self.model = EncoderDecoder(self.vocal_size)
 
     def train_step(self, x, target):
         # Encode
