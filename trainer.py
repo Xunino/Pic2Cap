@@ -1,4 +1,6 @@
 import tensorflow as tf
+from tqdm import tqdm
+
 from metrics import MaskedSoftmaxCELoss
 from moduls.model import EncoderDecoder
 from tensorflow.keras.optimizers import Adam
@@ -68,32 +70,43 @@ class trainer:
         x = preprocess_input(x)
         state = self.encode_model(x)
 
-        dec_input = tf.constant([0])[..., tf.newaxis]
-        sequences = []
+        start = [self.tokenizer.word_index["<sos>"]]
+        dec_input = tf.convert_to_tensor(start, dtype=tf.int64)
+        dec_input = tf.expand_dims(dec_input, 0)
 
+        sequences = []
         # Gen words
-        for _ in range(len(target)):
+        for _ in range(len(target[-1])):
             prediction, state = self.model(state, dec_input, training=False)
             output = tf.argmax(prediction, axis=2).numpy()
             dec_input = output
+            if output[0][0] == self.tokenizer.texts_to_sequences(["<eos>"]):
+                break
             sequences.append(output[0][0])
 
         # Compare sentence with predictions and targets
-        print(self.tokenizer.sequences_to_texts(target.numpy()))
-        print(self.tokenizer.sequences_to_texts([sequences]))
+        print("\n[TARGET]   : ", self.tokenizer.sequences_to_texts(target.numpy())[0])
+        print("[PREDICTED]: ", self.tokenizer.sequences_to_texts([sequences])[0])
+        print("-" * 100 + "\n")
 
     def train(self):
+        is_train = True
         sequences = self.loader.build_capture_loader()
         images = self.loader.build_image_loader()
-        for epoch in range(self.epochs):
-            for img, sequence in zip(images, sequences):
-                loss = self.train_step(img, sequence)
-                print(f"Epoch: {epoch} -- Loss: {loss}")
-                self.validate_step(img[:1], sequence[:1])
+        print(f"\nLen_images: {len(images)} -- Len_sequences: {len(sequences)}")
 
-        self.model.save_weights(self.checkpoints)
+        for epoch in range(self.epochs):
+            pbar = tqdm(enumerate(zip(images, sequences)), total=len(sequences)) if is_train else enumerate(
+                zip(images, sequences))
+            for it, (img, sequence) in pbar:
+                loss = self.train_step(img, sequence)
+                pbar.set_description(f"Epoch: {epoch} -- Loss: {loss}")
+                if it % 200 == 0:
+                    self.validate_step(img[:1], sequence[:1])
+
+        # self.model.save_weights(self.checkpoints)
 
 
 if __name__ == '__main__':
-    batch_size = 32
+    batch_size = 128
     trainer(batch_size=batch_size).train()

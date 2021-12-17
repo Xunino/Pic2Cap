@@ -2,6 +2,7 @@ import os
 import io
 import json
 import tensorflow as tf
+import string
 from tensorflow.keras.preprocessing.text import Tokenizer, tokenizer_from_json
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
@@ -18,6 +19,8 @@ class DatasetLoader:
         self.image_paths = []
         self.cap_images = []
         self.y_train = []
+
+        self.punctuation = list(string.punctuation) + ["a"]
 
         self.autotune = tf.data.experimental.AUTOTUNE
 
@@ -40,7 +43,7 @@ class DatasetLoader:
             l = line.strip().split("\t")
             path = os.path.join(self.meta_dir, l[0].split(".")[0] + ".jpg")
             if os.path.exists(path):
-                li = [i for i in (l[-1]).split() if i.lower() not in ["a"]]
+                li = [i for i in ("<sos> " + l[-1] + " <eos>").split() if i.lower() not in self.punctuation]
                 self.image_paths.append(path)
                 self.cap_images.append(" ".join(li))
         meta_data.close()
@@ -74,7 +77,6 @@ class DatasetLoader:
         return img
 
     def config_for_image_performance(self, ds):
-        ds = ds.cache()
         ds = ds.batch(self.batch_size)
         ds = ds.prefetch(buffer_size=self.autotune)
         return ds
