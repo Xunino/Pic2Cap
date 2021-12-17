@@ -72,7 +72,7 @@ class trainer:
         sequences = []
 
         # Gen words
-        for _ in range(self.seq_length):
+        for _ in range(len(target)):
             prediction, state = self.model(state, dec_input, training=False)
             output = tf.argmax(prediction, axis=2).numpy()
             dec_input = output

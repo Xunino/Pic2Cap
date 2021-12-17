@@ -40,7 +40,7 @@ class DatasetLoader:
             l = line.strip().split("\t")
             path = os.path.join(self.meta_dir, l[0].split(".")[0] + ".jpg")
             if os.path.exists(path):
-                li = [i for i in ("<sos> " + l[-1] + " <eos>").split() if i.lower() not in ["a"]]
+                li = [i for i in (l[-1]).split() if i.lower() not in ["a"]]
                 self.image_paths.append(path)
                 self.cap_images.append(" ".join(li))
         meta_data.close()
