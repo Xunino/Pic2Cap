@@ -13,7 +13,7 @@ class DatasetLoader:
         self.size_image = size_image
         self.meta_dir = meta_dir
         self.meta_file = meta_file
-        self.saved_tokenizer = os.getcwd() + "/dataset/tokenizer.json"
+        self.saved_tokenizer = os.getcwd() + "/tokenizer.json"
 
         self.image_paths = []
         self.cap_images = []

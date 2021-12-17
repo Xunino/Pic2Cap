@@ -93,5 +93,5 @@ class trainer:
 
 
 if __name__ == '__main__':
-    batch_size = 128
+    batch_size = 32
     trainer(batch_size=batch_size).train()
