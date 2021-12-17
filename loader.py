@@ -1,7 +1,6 @@
 import os
 import io
 import json
-import pathlib
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer, tokenizer_from_json
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -14,7 +13,7 @@ class DatasetLoader:
         self.size_image = size_image
         self.meta_dir = meta_dir
         self.meta_file = meta_file
-        self.saved_tokenizer = "./tokenizer.json"
+        self.saved_tokenizer = os.getcwd() + "/tokenizer.json"
 
         self.image_paths = []
         self.cap_images = []
@@ -36,7 +35,7 @@ class DatasetLoader:
 
     def loader(self):
         meta_data = open(self.meta_file, "r")
-        for line in meta_data.readlines()[:1000]:
+        for line in meta_data.readlines():
             l = line.strip().split("\t")
             path = os.path.join(self.meta_dir, l[0].split(".")[0] + ".jpg")
             if os.path.exists(path):
@@ -69,7 +68,7 @@ class DatasetLoader:
     def processing_image(file_image):
         img = tf.io.read_file(file_image)
         img = tf.io.decode_jpeg(img, channels=3)
-        img = tf.image.resize(img, [224, 224]) / 255.
+        img = tf.image.resize(img, [224, 224])
         return img
 
     def config_for_image_performance(self, ds):

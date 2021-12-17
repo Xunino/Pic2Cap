@@ -17,14 +17,14 @@ def encode(input_shape):
 class trainer:
     def __init__(self, input_shape=(224, 224, 3),
                  seq_length=30,
-                 lr=1e-4,
+                 lr=1e-3,
                  batch_size=32,
-                 epochs=5,
-                 meta_dir="dataset/Flicker8k_Dataset",
-                 meta_file="dataset/Flickr8k.token.txt",
-                 checkpoints="model.h5"
-                 # meta_dir="/content/drive/MyDrive/Flickr8k/Imgs/",
-                 # meta_file="/content/drive/MyDrive/Flickr8k/text/Flickr8k.token.txt"
+                 epochs=20,
+                 #  meta_dir="dataset/Flicker8k_Dataset",
+                 #  meta_file="dataset/Flickr8k.token.txt",
+                 checkpoints="model.h5",
+                 meta_dir="/content/drive/MyDrive/Flickr8k/Imgs/",
+                 meta_file="/content/drive/MyDrive/Flickr8k/text/Flickr8k.token.txt"
                  ):
         self.seq_length = seq_length
         self.epochs = epochs
@@ -50,14 +50,10 @@ class trainer:
     def train_step(self, x, target):
         # Encode
         # Encode with CV
-        sos = tf.reshape(tf.constant([self.tokenizer.word_index['<sos>']] * len(target)),
-                         shape=(-1, 1))
-        dec_input = tf.concat([sos, target[:, :-1]], 1)
-
         x = preprocess_input(x)
         state = self.encode_model(x)
         with tf.GradientTape() as tape:
-            pred, state = self.model(state, dec_input)
+            pred, state = self.model(state, target)
             loss = MaskedSoftmaxCELoss(target, pred)
 
         train_vars = self.model.trainable_variables
@@ -66,15 +62,22 @@ class trainer:
         return loss
 
     def validate_step(self, x, target):
-        input_decode = ["<eos>"] * self.seq_length
-        sentences = []
+        x = preprocess_input(x)
+        state = self.encode_model(x)
+
+        dec_input = tf.constant([self.tokenizer.word_index['<sos>']])[..., tf.newaxis]
+        sequences = []
+
         # Gen words
-        for _ in range(len(target)):
-            prediction = self.model(x, input_decode, training=False)
+        for _ in range(self.seq_length):
+            prediction, state = self.model(state, dec_input, training=False)
             output = tf.argmax(prediction, axis=2).numpy()
-            input_decode = output
-            sentences.append(output)
+            dec_input = output
+            sequences.append(output[0][0])
+
         # Compare sentence with predictions and targets
+        print(self.tokenizer.sequences_to_texts(target.numpy()))
+        print(self.tokenizer.sequences_to_texts([sequences]))
 
     def train(self):
         sequences = self.loader.build_capture_loader()
@@ -83,8 +86,12 @@ class trainer:
             for img, sequence in zip(images, sequences):
                 loss = self.train_step(img, sequence)
                 print(f"Epoch: {epoch} -- Loss: {loss}")
+
+            self.validate_step(img[:1], sequence[:1])
+
         self.model.save_weights(self.checkpoints)
 
 
 if __name__ == '__main__':
-    trainer().train()
+    batch_size = 128
+    trainer(batch_size=batch_size).train()
