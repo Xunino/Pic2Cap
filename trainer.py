@@ -47,14 +47,17 @@ class trainer:
         self.optimizer = Adam(learning_rate=lr)
         self.model = EncoderDecoder(self.vocal_size, d_model=d_model)
 
-    def train_step(self, x, sequences, y):
+    def train_step(self, x, y):
         # Encode
         # Encode with CV
+        in_decode = y[:, :-1]
+        out_decode = y[:, 1:]
+
         x = preprocess_input(x)
         state = self.encode_model(x)
         with tf.GradientTape() as tape:
-            pred, state = self.model(state, sequences)
-            loss = MaskedSoftmaxCELoss(y, pred)
+            pred, state = self.model(state, in_decode)
+            loss = MaskedSoftmaxCELoss(out_decode, pred)
 
         train_vars = self.model.trainable_variables
         gradients = tape.gradient(loss, train_vars)
@@ -80,10 +83,10 @@ class trainer:
         print(self.tokenizer.sequences_to_texts([sequences]))
 
     def train(self):
-        sequences, y_train = self.loader.build_capture_loader()
+        sequences = self.loader.build_capture_loader()
         images = self.loader.build_image_loader()
         for epoch in range(self.epochs):
-            for img, sequence, y in zip(images, sequences, y_train):
+            for img, sequence, y in zip(images, sequences):
                 loss = self.train_step(img, sequence, y)
                 print(f"Epoch: {epoch} -- Loss: {loss}")
                 self.validate_step(img[:1], sequence[:1])
