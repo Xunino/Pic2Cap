@@ -39,8 +39,10 @@ class DatasetLoader:
             l = line.strip().split("\t")
             path = os.path.join(self.meta_dir, l[0].split(".")[0] + ".jpg")
             if os.path.exists(path):
-                self.image_paths.append(path)
-                self.cap_images.append("<sos> " + l[-1] + " <eos>")
+                li = [i for i in l[-1].split() if i.lower() not in ["a"]]
+                for i in range(1, len(li)):
+                    self.image_paths.append(path)
+                    self.cap_images.append("<sos> " + " ".join(li[:i]) + " <eos>")
         meta_data.close()
 
     def build_capture_loader(self):
@@ -93,19 +95,19 @@ if __name__ == '__main__':
     token = loader.load_tokenizer()
     sequences_padded = loader.build_capture_loader()
     sentence = next(iter(sequences_padded))
-    # print(sentence)
+    print(sentence)
 
     train_ds = loader.build_image_loader()
     image_batch = next(iter(train_ds))
-    # print(image_batch)
+    print(image_batch)
 
-    import matplotlib.pyplot as plt
-
-    plt.figure(figsize=(10, 10))
-    for i in range(9):
-        ax = plt.subplot(3, 3, i + 1)
-        plt.imshow(image_batch[i].numpy().astype("uint8"))
-        label = sentence[i]
-        plt.title(token.sequences_to_texts(sentence.numpy())[i])
-        plt.axis("off")
-        plt.show()
+    # import matplotlib.pyplot as plt
+    #
+    # plt.figure(figsize=(10, 10))
+    # for i in range(9):
+    #     ax = plt.subplot(3, 3, i + 1)
+    #     plt.imshow(image_batch[i].numpy().astype("uint8"))
+    #     label = sentence[i]
+    #     plt.title(token.sequences_to_texts(sentence.numpy())[i])
+    #     plt.axis("off")
+    #     plt.show()

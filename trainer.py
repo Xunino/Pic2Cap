@@ -42,19 +42,23 @@ class trainer:
         self.vocal_size = len(self.tokenizer.word_docs) + 1
 
         self.encode_model = encode(input_shape)
-        # d_model = self.encode_model.output_shape[-1]
+        d_model = self.encode_model.output_shape[-1]
 
         self.optimizer = Adam(learning_rate=lr)
-        self.model = EncoderDecoder(self.vocal_size)
+        self.model = EncoderDecoder(self.vocal_size, d_model=d_model)
 
     def train_step(self, x, target):
         # Encode
         # Encode with CV
+
+        i = target[:-1]
+        y = target[-1]
+
         x = preprocess_input(x)
         state = self.encode_model(x)
         with tf.GradientTape() as tape:
-            pred, state = self.model(state, target)
-            loss = MaskedSoftmaxCELoss(target, pred)
+            pred, state = self.model(state, i)
+            loss = MaskedSoftmaxCELoss(y, pred)
 
         train_vars = self.model.trainable_variables
         gradients = tape.gradient(loss, train_vars)
@@ -86,8 +90,7 @@ class trainer:
             for img, sequence in zip(images, sequences):
                 loss = self.train_step(img, sequence)
                 print(f"Epoch: {epoch} -- Loss: {loss}")
-
-            self.validate_step(img[:1], sequence[:1])
+                self.validate_step(img[:1], sequence[:1])
 
         self.model.save_weights(self.checkpoints)
 

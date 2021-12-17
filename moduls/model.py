@@ -4,7 +4,7 @@ from tensorflow.keras.models import Model
 
 
 class EncoderDecoder(Model):
-    def __init__(self, vocal_size, d_model=128, embedding_size=64):
+    def __init__(self, vocal_size, d_model=1280, embedding_size=64):
         super(EncoderDecoder, self).__init__()
         self.dense = Dense(d_model)
 
