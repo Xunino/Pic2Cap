@@ -86,8 +86,8 @@ class trainer:
         sequences = self.loader.build_capture_loader()
         images = self.loader.build_image_loader()
         for epoch in range(self.epochs):
-            for img, sequence, y in zip(images, sequences):
-                loss = self.train_step(img, sequence, y)
+            for img, sequence in zip(images, sequences):
+                loss = self.train_step(img, sequence)
                 print(f"Epoch: {epoch} -- Loss: {loss}")
                 self.validate_step(img[:1], sequence[:1])
 
