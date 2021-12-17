@@ -50,7 +50,7 @@ class trainer:
     def train_step(self, x, target):
         # Encode
         # Encode with CV
-        sos = tf.reshape(tf.constant([self.tokenizer.word_index['<sos>']] * self.batch_size),
+        sos = tf.reshape(tf.constant([self.tokenizer.word_index['<sos>']] * len(target)),
                          shape=(-1, 1))
         dec_input = tf.concat([sos, target[:, :-1]], 1)
 

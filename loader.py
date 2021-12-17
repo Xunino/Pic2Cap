@@ -14,7 +14,7 @@ class DatasetLoader:
         self.size_image = size_image
         self.meta_dir = meta_dir
         self.meta_file = meta_file
-        self.saved_tokenizer = str(pathlib.Path(meta_dir).parent) + "/tokenizer.json"
+        self.saved_tokenizer = "./tokenizer.json"
 
         self.image_paths = []
         self.cap_images = []
