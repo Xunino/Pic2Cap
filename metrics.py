@@ -3,10 +3,15 @@ import numpy as np
 import tensorflow as tf
 
 
-def MaskSoftmaxCELoss(y_true, y_pred):
-    weighted_mask = 1 - tf.equal(y_true, 0)
-    unweighted_loss = tf.nn.softmax_cross_entropy_with_logits(y_true, y_pred)
-    weighted_loss = tf.reduce_mean(unweighted_loss * weighted_mask)
+def MaskedSoftmaxCELoss(label, pred):
+    """
+    :param label: shape (batch_size, max_length, vocab_size)
+    :param pred: shape (batch_size, max_length)
+    :return: weighted_loss: shape (batch_size, max_length)
+    """
+    weights_mask = 1 - np.equal(label, 0)
+    unweighted_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(label, pred)
+    weighted_loss = tf.reduce_mean(unweighted_loss * weights_mask)
     return weighted_loss
 
 
