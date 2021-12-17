@@ -17,6 +17,7 @@ class DatasetLoader:
 
         self.image_paths = []
         self.cap_images = []
+        self.y_train = []
 
         self.autotune = tf.data.experimental.AUTOTUNE
 
@@ -42,7 +43,8 @@ class DatasetLoader:
                 li = [i for i in l[-1].split() if i.lower() not in ["a"]]
                 for i in range(1, len(li)):
                     self.image_paths.append(path)
-                    self.cap_images.append("<sos> " + " ".join(li[:i]) + " <eos>")
+                    self.cap_images.append(" ".join(li[:i]))
+                    self.y_train.append(li[i])
         meta_data.close()
 
     def build_capture_loader(self):
@@ -55,10 +57,11 @@ class DatasetLoader:
             tokenizer = self.load_tokenizer()
 
         sequences = tokenizer.texts_to_sequences(self.cap_images)
+        y_train = tokenizer.texts_to_sequences(self.y_train)
         sequences_padded = pad_sequences(sequences, maxlen=self.maxlen, padding="post", truncating="post")
 
         # Performance
-        return self.config_for_text_performance(sequences_padded)
+        return self.config_for_text_performance(sequences_padded), self.config_for_text_performance(y_train)
 
     def config_for_text_performance(self, ds):
         ds = tf.data.Dataset.from_tensor_slices(ds)
