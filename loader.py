@@ -8,7 +8,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
 class DatasetLoader:
-    def __init__(self, meta_dir, meta_file, batch_size=32, maxlen=120, size_image=224):
+    def __init__(self, meta_dir, meta_file, batch_size=32, maxlen=120, size_image=299):
         self.batch_size = batch_size
         self.maxlen = maxlen
         self.size_image = size_image
@@ -17,8 +17,11 @@ class DatasetLoader:
         self.saved_tokenizer = os.getcwd() + "/tokenizer.json"
 
         self.image_paths = []
+        self.image_paths_test = []
         self.cap_images = []
+        self.cap_images_test = []
         self.y_train = []
+        self.y_test = []
 
         self.punctuation = list(string.punctuation) + ["a"]
 
@@ -43,9 +46,16 @@ class DatasetLoader:
             l = line.strip().split("\t")
             path = os.path.join(self.meta_dir, l[0].split(".")[0] + ".jpg")
             if os.path.exists(path):
-                li = [i for i in ("<sos> " + l[-1] + " <eos>").split() if i.lower() not in self.punctuation]
-                self.image_paths.append(path)
-                self.cap_images.append(" ".join(li))
+                li = [i for i in ("<sos> " + l[-1]).split() if i.lower() not in self.punctuation]
+                for i in range(2, len(li)):
+                    self.image_paths.append(path)
+                    self.cap_images.append(" ".join(li[:i]))
+
+                # """
+                # Tìm viết thêm dữ liệu dữ đoán
+                # """
+                # self.cap_images_test.append(" ".join(li))
+                # self.image_paths_test.append(path)
         meta_data.close()
 
     def build_capture_loader(self):
@@ -69,11 +79,10 @@ class DatasetLoader:
         ds = ds.prefetch(buffer_size=self.autotune)
         return ds
 
-    @staticmethod
-    def processing_image(file_image):
+    def processing_image(self, file_image):
         img = tf.io.read_file(file_image)
         img = tf.io.decode_jpeg(img, channels=3)
-        img = tf.image.resize(img, [224, 224])
+        img = tf.image.resize(img, [self.size_image, self.size_image])
         return img
 
     def config_for_image_performance(self, ds):
@@ -93,15 +102,15 @@ if __name__ == '__main__':
     meta_dir = "dataset/Flicker8k_Dataset/"
     meta_file = "dataset/Flickr8k.token.txt"
 
-    loader = DatasetLoader(meta_dir, meta_file, batch_size=1)
+    loader = DatasetLoader(meta_dir, meta_file, batch_size=2)
     token = loader.load_tokenizer()
     sequences_padded = loader.build_capture_loader()
     sentence = next(iter(sequences_padded))
     print(sentence)
 
-    train_ds = loader.build_image_loader()
-    image_batch = next(iter(train_ds))
-    print(image_batch)
+    # train_ds = loader.build_image_loader()
+    # image_batch = next(iter(train_ds))
+    # print(image_batch)
 
     # import matplotlib.pyplot as plt
     #

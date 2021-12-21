@@ -1,23 +1,23 @@
 import tensorflow as tf
 from tqdm import tqdm
 
-from metrics import MaskedSoftmaxCELoss
+from metrics import MaskedSoftmaxCELoss, CustomSchedule
 from moduls.model import EncoderDecoder
 from tensorflow.keras.optimizers import Adam
 from loader import DatasetLoader
-from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
+from tensorflow.keras.applications.inception_v3 import InceptionV3, preprocess_input
 from tensorflow.keras.models import Model
 
 
 def encode(input_shape):
-    backbone = MobileNetV2(include_top=True, weights="imagenet", input_shape=input_shape)
+    backbone = InceptionV3(include_top=True, weights="imagenet", input_shape=input_shape)
     for layer in backbone.layers:
         layer.trainable = False
     return Model(backbone.input, backbone.layers[-2].output)  # (1, 1280)
 
 
 class trainer:
-    def __init__(self, input_shape=(224, 224, 3),
+    def __init__(self, input_shape=(299, 299, 3),
                  seq_length=30,
                  lr=1e-3,
                  batch_size=32,
@@ -46,7 +46,9 @@ class trainer:
         self.encode_model = encode(input_shape)
         d_model = self.encode_model.output_shape[-1]
 
-        self.optimizer = Adam(learning_rate=lr)
+        # Initialize learning rate scheduler
+        learning_scheduler = CustomSchedule(d_model, batch_size // 2)
+        self.optimizer = Adam(learning_rate=learning_scheduler)
         self.model = EncoderDecoder(self.vocal_size, d_model=d_model)
 
     def train_step(self, x, y):
@@ -66,28 +68,31 @@ class trainer:
         self.optimizer.apply_gradients(zip(gradients, train_vars))
         return loss
 
-    def validate_step(self, x, target):
-        x = preprocess_input(x)
-        state = self.encode_model(x)
+    def validate_step(self, xs, targets):
+        for i in range(len(xs)):
+            x = tf.expand_dims(xs[i], axis=0)
+            target = tf.expand_dims(targets[i], axis=0)
+            x = preprocess_input(x)
+            state = self.encode_model(x)
 
-        start = [self.tokenizer.word_index["<sos>"]]
-        dec_input = tf.convert_to_tensor(start, dtype=tf.int64)
-        dec_input = tf.expand_dims(dec_input, 0)
+            start = [self.tokenizer.word_index["<sos>"]]
+            dec_input = tf.convert_to_tensor(start, dtype=tf.int64)
+            dec_input = tf.expand_dims(dec_input, 0)
 
-        sequences = []
-        # Gen words
-        for _ in range(len(target[-1])):
-            prediction, state = self.model(state, dec_input, training=False)
-            output = tf.argmax(prediction, axis=2).numpy()
-            dec_input = output
-            if output[0][0] == self.tokenizer.texts_to_sequences(["<eos>"]):
-                break
-            sequences.append(output[0][0])
+            sequences = []
+            # Gen words
+            for _ in range(len(target[-1])):
+                prediction, state = self.model(state, dec_input, training=False)
+                output = tf.argmax(prediction, axis=2).numpy()
+                dec_input = output
+                if output[0][0] == self.tokenizer.texts_to_sequences(["<eos>"]):
+                    break
+                sequences.append(output[0][0])
 
-        # Compare sentence with predictions and targets
-        print("\n[TARGET]   : ", self.tokenizer.sequences_to_texts(target.numpy())[0])
-        print("[PREDICTED]: ", self.tokenizer.sequences_to_texts([sequences])[0])
-        print("-" * 100 + "\n")
+            # Compare sentence with predictions and targets
+            print("\n[TARGET]   : ", self.tokenizer.sequences_to_texts(target.numpy())[0])
+            print("[PREDICTED]: ", self.tokenizer.sequences_to_texts([sequences])[0])
+            print("-" * 100 + "\n")
 
     def train(self):
         is_train = True
@@ -102,7 +107,7 @@ class trainer:
                 loss = self.train_step(img, sequence)
                 pbar.set_description(f"Epoch: {epoch} -- Loss: {loss}")
                 if it % 200 == 0:
-                    self.validate_step(img[:1], sequence[:1])
+                    self.validate_step(img[-3:-1], sequence[-3:-1])
 
         # self.model.save_weights(self.checkpoints)
 
